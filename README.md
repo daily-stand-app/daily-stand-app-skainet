@@ -5,7 +5,7 @@ Kleines Java-25-Maven-Projekt als Startpunkt fuer eine lokale Standup-Anwendung 
 ## Build
 
 ```bash
-./mvnw compile
+./mvnw compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 ```
 
 ## Start auf der Kommandozeile
@@ -16,8 +16,16 @@ Zuerst die lokale Konfiguration anlegen:
 cp src/main/resources/application.properties.example src/main/resources/application.properties
 ```
 
+Danach in `src/main/resources/application.properties` den Modellpfad setzen:
+
+```properties
+embedded.model.path=path/to/llama-3.2-1b-instruct-q8_0.gguf
+```
+
 Dann die Anwendung starten:
 
 ```bash
-java -cp target/classes:$HOME/.m2/repository/org/eclipse/jgit/org.eclipse.jgit/7.6.0.202603022253-r/org.eclipse.jgit-7.6.0.202603022253-r.jar:$HOME/.m2/repository/com/googlecode/javaewah/JavaEWAH/1.2.3/JavaEWAH-1.2.3.jar:$HOME/.m2/repository/commons-codec/commons-codec/1.21.0/commons-codec-1.21.0.jar:$HOME/.m2/repository/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar daily.standapp.App
+java -Xms2g -Xmx16g --enable-preview --add-modules jdk.incubator.vector \
+  -cp "target/classes:$(cat target/classpath.txt)" \
+  daily.standapp.App
 ```

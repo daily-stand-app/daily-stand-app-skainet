@@ -6,8 +6,11 @@ import daily.standapp.summary.EmbeddedLLMSummary;
 import daily.standapp.summary.LocalAPISummary;
 import daily.standapp.summary.PublicAPISummary;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Properties;
 
 public final class App {
 
@@ -15,7 +18,8 @@ public final class App {
     }
 
     public static void main(String[] args) {
-        String modelPath = "path/to/llama-3.2-1b-instruct-q8_0.gguf";
+        Properties properties = loadProperties();
+        String modelPath = requiredProperty(properties, "embedded.model.path");
         int maxOutputTokens = 300;
 
         GitHistoryReader historyReader = new GitHistoryReader();
@@ -70,5 +74,26 @@ public final class App {
         System.out.println("- duration seconds: " + generationStats.durationSeconds());
         System.out.println("- output tokens/s: " + generationStats.outputTokensPerSecond());
         System.out.println("- max output tokens: " + maxOutputTokens);
+    }
+
+    private static Properties loadProperties() {
+        try (InputStream inputStream = App.class.getClassLoader().getResourceAsStream("application.properties")) {
+            if (inputStream == null) {
+                throw new IllegalStateException("Missing application.properties on the classpath.");
+            }
+            Properties properties = new Properties();
+            properties.load(inputStream);
+            return properties;
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to load application.properties.", exception);
+        }
+    }
+
+    private static String requiredProperty(Properties properties, String key) {
+        String value = properties.getProperty(key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Missing property: " + key);
+        }
+        return value.trim();
     }
 }
