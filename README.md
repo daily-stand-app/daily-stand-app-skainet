@@ -14,6 +14,11 @@ Die Uebung ist ueber mehrere Branches aufgebaut.
 - `step3`: Der lokale Tool-Call wird in einen MCP-Call verpackt. Dazu gibt es einen mit Spring AI implementierten MCP-Server, der `git_log` als Tool bereitstellt. Das Modell darf diesen MCP-Server ueber den Client aufrufen.
 - `main`: Enthält alles bis einschliesslich `step2`. Das MCP-Beispiel liegt bewusst nur auf `step3`.
 
+Wichtig fuer `step1`:
+
+- entweder hinterlegst du einen API-Key fuer ein oeffentliches LLM, z. B. ChatGPT oder einen anderen OpenAI-kompatiblen Anbieter. Der zugehoerige Codepfad ist im Projekt vorhanden, aber standardmaessig auskommentiert.
+- oder du startest einen lokalen LM Studio Server, der ueber REST erreichbar ist. Der Client liest dann die vom LM Studio Server angebotenen Modelle aus und probiert die Zusammenfassung fuer jedes dieser Modelle aus.
+
 Empfohlener Ablauf:
 
 - Starte auf `initial` und baue die Loesung fuer `step1` selbst.
@@ -42,6 +47,8 @@ Wichtige Werte in `application.properties`:
 - `embedded.model.path`: Pfad zu deinem lokalen GGUF-Modell fuer SKaiNET
 - `lmstudio.base.url`: URL fuer einen lokalen LM-Studio-Server
 - `mcp.server.url`: erst fuer `step3` relevant
+
+Fuer `step1` brauchst du also entweder `openai.api.key` oder einen laufenden LM Studio Server unter `lmstudio.base.url`.
 
 Je nach Branch wird nicht jeder Eintrag sofort verwendet, aber du kannst die Datei von Anfang an vollstaendig befuellen.
 
