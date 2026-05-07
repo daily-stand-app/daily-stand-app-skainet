@@ -24,18 +24,37 @@ Danach in `src/main/resources/application.properties` den Modellpfad setzen:
 embedded.model.path=path/to/llama-3.2-1b-instruct-q8_0.gguf
 ```
 
-Dann zuerst den MCP-Server starten:
+Dann zuerst den MCP-Server starten.
+
+Unix/macOS:
 
 ```bash
 java -cp "target/classes:$(cat target/classpath.txt)" \
   daily.standapp.mcp.server.GitLogMcpServerApplication
 ```
 
-Danach die eigentliche Anwendung starten:
+Windows PowerShell:
+
+```powershell
+java -cp "target/classes;$((Get-Content target/classpath.txt -Raw).Trim())" `
+  daily.standapp.mcp.server.GitLogMcpServerApplication
+```
+
+Danach die eigentliche Anwendung starten.
+
+Unix/macOS:
 
 ```bash
 java -Xms2g -Xmx16g --enable-preview --add-modules jdk.incubator.vector \
   -cp "target/classes:$(cat target/classpath.txt)" \
+  daily.standapp.App
+```
+
+Windows PowerShell:
+
+```powershell
+java -Xms2g -Xmx16g --enable-preview --add-modules jdk.incubator.vector `
+  -cp "target/classes;$((Get-Content target/classpath.txt -Raw).Trim())" `
   daily.standapp.App
 ```
 
