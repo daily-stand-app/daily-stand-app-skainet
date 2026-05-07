@@ -22,11 +22,12 @@ public final class McpToolCallingSummary {
             rufe vor deiner Antwort genau einmal das Tool git_log auf.
             """;
 
-    public ToolCallingResult summarize(String modelPath, String serverUrl) {
+    public ToolCallingResult summarize(String modelPath, String serverUrl, Path repositoryPath) {
         Path ggufPath = Path.of(modelPath);
         if (!Files.exists(ggufPath)) {
             throw new IllegalStateException("Model file not found: " + ggufPath.toAbsolutePath());
         }
+        Path resolvedRepositoryPath = repositoryPath.toAbsolutePath().normalize();
 
         AtomicInteger toolCalls = new AtomicInteger();
         try (McpToolClient mcpToolClient = McpToolClient.connect(serverUrl);
@@ -64,7 +65,7 @@ public final class McpToolCallingSummary {
             };
 
             long startWallNanos = System.nanoTime();
-            String finalResponse = agent.chat(buildPrompt(), meter);
+            String finalResponse = agent.chat(buildPrompt(resolvedRepositoryPath), meter);
             long endWallNanos = System.nanoTime();
 
             int outputTokens = tokenCount[0];
@@ -89,12 +90,13 @@ public final class McpToolCallingSummary {
         }
     }
 
-    private String buildPrompt() {
-        return """
+    private String buildPrompt(Path repositoryPath) {
+        return ("""
                 Ich bin ein erfahrener Java Senior Developer. Für mein Daily Stand-Up morgen früh muss ich zusammenfassen, was ich bisher gemacht habe.
                 Fasse mir das Git-Repository kurz zusammen, so dass ich es meinen Kollegen erzählen kann.
-                Wenn du Commit-Informationen brauchst, nutze das Tool git_log.
-                """.trim();
+                Das zu analysierende lokale Git-Repository liegt unter: %s
+                Wenn du Commit-Informationen brauchst, nutze das Tool git_log und übergib diesen Repository-Pfad.
+                """.formatted(repositoryPath)).trim();
     }
 
     public record ToolCallingResult(String summary,

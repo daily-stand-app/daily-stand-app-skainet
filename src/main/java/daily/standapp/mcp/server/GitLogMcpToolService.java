@@ -14,18 +14,18 @@ public class GitLogMcpToolService {
     private static final int DEFAULT_MAX_COUNT = 20;
 
     private final GitHistoryReader gitHistoryReader;
-    private final GitRepositoryProperties gitRepositoryProperties;
 
-    public GitLogMcpToolService(GitRepositoryProperties gitRepositoryProperties) {
+    public GitLogMcpToolService() {
         this.gitHistoryReader = new GitHistoryReader();
-        this.gitRepositoryProperties = gitRepositoryProperties;
     }
 
     @Tool(name = "git_log", description = "Liest aktuelle Commits aus einem lokalen Git-Repository.")
-    public String gitLog(@ToolParam(description = "Maximale Anzahl der letzten Commits") Integer maxCount) {
-        Path repositoryPath = gitRepositoryProperties.repositoryPath();
+    public String gitLog(
+            @ToolParam(description = "Pfad zu einem lokalen Git-Repository") String repositoryPath,
+            @ToolParam(description = "Maximale Anzahl der letzten Commits") Integer maxCount) {
+        Path resolvedRepositoryPath = Path.of(repositoryPath).toAbsolutePath().normalize();
         int effectiveMaxCount = maxCount != null && maxCount > 0 ? maxCount : DEFAULT_MAX_COUNT;
-        List<GitCommitEntry> commits = gitHistoryReader.readHistory(repositoryPath, effectiveMaxCount);
+        List<GitCommitEntry> commits = gitHistoryReader.readHistory(resolvedRepositoryPath, effectiveMaxCount);
 
         if (commits.isEmpty()) {
             return "Keine Commits gefunden.";

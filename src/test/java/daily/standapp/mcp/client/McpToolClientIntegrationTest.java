@@ -29,8 +29,7 @@ class McpToolClientIntegrationTest {
                         "spring.ai.mcp.server.annotation-scanner.enabled=false",
                         "spring.ai.mcp.server.name=git-log-mcp-server",
                         "spring.ai.mcp.server.version=1.0.0",
-                        "spring.ai.mcp.server.type=SYNC",
-                        "standapp.git.repository-path=" + Path.of("..", "example.git").toAbsolutePath().normalize()
+                        "spring.ai.mcp.server.type=SYNC"
                 )
                 .run();
              McpToolClient mcpToolClient = McpToolClient.connect("http://localhost:18085")) {
@@ -39,7 +38,10 @@ class McpToolClientIntegrationTest {
 
             assertFalse(tools.isEmpty());
 
-            String output = tools.getFirst().execute(Map.of("maxCount", 3));
+            String output = tools.getFirst().execute(Map.of(
+                    "repositoryPath", Path.of("..", "example.git").toAbsolutePath().normalize().toString(),
+                    "maxCount", 3
+            ));
 
             assertTrue(output.contains("Committer:"));
             assertTrue(output.contains("E-Mail:"));

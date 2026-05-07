@@ -11,10 +11,9 @@ class GitLogMcpToolServiceTest {
 
     @Test
     void readsCommitsViaJGitForConfiguredRepository() {
-        GitRepositoryProperties properties = new GitRepositoryProperties(Path.of("..", "example.git"));
-        GitLogMcpToolService service = new GitLogMcpToolService(properties);
+        GitLogMcpToolService service = new GitLogMcpToolService();
 
-        String output = service.gitLog(3);
+        String output = service.gitLog(Path.of("..", "example.git").toString(), 3);
 
         assertFalse(output.isBlank());
         assertTrue(output.contains("Committer:"));

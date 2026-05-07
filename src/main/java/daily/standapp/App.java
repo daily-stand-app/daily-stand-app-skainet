@@ -4,6 +4,7 @@ import daily.standapp.summary.McpToolCallingSummary;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.Properties;
 
 public final class App {
@@ -15,6 +16,7 @@ public final class App {
         Properties properties = loadProperties();
         String modelPath = requiredProperty(properties, "embedded.model.path");
         String mcpServerUrl = requiredProperty(properties, "mcp.server.url");
+        Path repositoryPath = Path.of("..", "example.git");
 
         // Path repositoryPath = Path.of("..", "example.git");
         //
@@ -38,7 +40,8 @@ public final class App {
         McpToolCallingSummary mcpToolCallingSummary = new McpToolCallingSummary();
         McpToolCallingSummary.ToolCallingResult toolCallingResult = mcpToolCallingSummary.summarize(
                 modelPath,
-                mcpServerUrl
+                mcpServerUrl,
+                repositoryPath
         );
         System.out.println("Zusammenfassung:");
         System.out.println(toolCallingResult.summary());
