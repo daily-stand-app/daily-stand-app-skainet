@@ -1,0 +1,6 @@
+# Lokale Konfiguration. Diese Datei als application.properties kopieren
+# und mit den eigenen Werten befuellen.
+openai.api.key=YOUR_OPENAI_API_KEY_HERE
+openai.model=gpt-5.4-mini
+openai.base.url=https://api.openai.com/v1/responses
+lmstudio.base.url=http://localhost:1234/v1
