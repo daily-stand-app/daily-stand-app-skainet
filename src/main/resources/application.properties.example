@@ -5,3 +5,4 @@ openai.model=gpt-5.4-mini
 openai.base.url=https://api.openai.com/v1/responses
 lmstudio.base.url=http://localhost:1234/v1
 embedded.model.path=path/to/llama-3.2-1b-instruct-q8_0.gguf
+mcp.server.url=http://localhost:8085

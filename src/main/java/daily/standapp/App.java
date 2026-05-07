@@ -1,10 +1,9 @@
 package daily.standapp;
 
-import daily.standapp.summary.ToolCallingSummary;
+import daily.standapp.summary.McpToolCallingSummary;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.Properties;
 
 public final class App {
@@ -15,25 +14,42 @@ public final class App {
     public static void main(String[] args) {
         Properties properties = loadProperties();
         String modelPath = requiredProperty(properties, "embedded.model.path");
-        Path repositoryPath = Path.of("..", "example.git");
+        String mcpServerUrl = requiredProperty(properties, "mcp.server.url");
 
-        // GitHistoryReader historyReader = new GitHistoryReader();
-        // List<GitCommitEntry> commits = historyReader.readHistory(repositoryPath);
+        // Path repositoryPath = Path.of("..", "example.git");
         //
-        // System.out.println("=== Embedded LLM ===");
-        // EmbeddedLLMSummary embeddedLLMSummary = new EmbeddedLLMSummary();
-        // System.out.println(embeddedLLMSummary.summarize(modelPath, commits));
+        // System.out.println("=== Tool Calling ===");
+        // ToolCallingSummary toolCallingSummary = new ToolCallingSummary();
+        // ToolCallingSummary.ToolCallingResult toolCallingResult = toolCallingSummary.summarize(
+        //         modelPath,
+        //         repositoryPath
+        // );
+        // System.out.println("Zusammenfassung:");
+        // System.out.println(toolCallingResult.summary());
+        // printToolCallingStats(toolCallingResult.toolCalls(),
+        //         toolCallingResult.outputTokens(),
+        //         toolCallingResult.wallSeconds(),
+        //         toolCallingResult.wallTokensPerSecond(),
+        //         toolCallingResult.decodeSeconds(),
+        //         toolCallingResult.decodeTokensPerSecond());
         // System.out.println();
-
-        System.out.println("=== Tool Calling ===");
-        ToolCallingSummary toolCallingSummary = new ToolCallingSummary();
-        ToolCallingSummary.ToolCallingResult toolCallingResult = toolCallingSummary.summarize(
+        //
+        System.out.println("=== MCP Tool Calling ===");
+        McpToolCallingSummary mcpToolCallingSummary = new McpToolCallingSummary();
+        McpToolCallingSummary.ToolCallingResult toolCallingResult = mcpToolCallingSummary.summarize(
                 modelPath,
-                repositoryPath
+                mcpServerUrl
         );
         System.out.println("Zusammenfassung:");
         System.out.println(toolCallingResult.summary());
-        printToolCallingStats(toolCallingResult);
+        printToolCallingStats(
+                toolCallingResult.toolCalls(),
+                toolCallingResult.outputTokens(),
+                toolCallingResult.wallSeconds(),
+                toolCallingResult.wallTokensPerSecond(),
+                toolCallingResult.decodeSeconds(),
+                toolCallingResult.decodeTokensPerSecond()
+        );
         System.out.println();
 
         // System.out.println("=== Public API ===");
@@ -63,15 +79,20 @@ public final class App {
         // }
     }
 
-    private static void printToolCallingStats(ToolCallingSummary.ToolCallingResult toolCallingResult) {
+    private static void printToolCallingStats(int toolCalls,
+                                              int outputTokens,
+                                              double wallSeconds,
+                                              double wallTokensPerSecond,
+                                              double decodeSeconds,
+                                              double decodeTokensPerSecond) {
         System.out.println();
         System.out.println("Statistik:");
-        System.out.println("- tool calls: " + toolCallingResult.toolCalls());
-        System.out.println("- output tokens: " + toolCallingResult.outputTokens());
-        System.out.println("- wall seconds: " + toolCallingResult.wallSeconds());
-        System.out.println("- output tokens/s: " + toolCallingResult.wallTokensPerSecond());
-        System.out.println("- decode seconds: " + toolCallingResult.decodeSeconds());
-        System.out.println("- decode tokens/s: " + toolCallingResult.decodeTokensPerSecond());
+        System.out.println("- tool calls: " + toolCalls);
+        System.out.println("- output tokens: " + outputTokens);
+        System.out.println("- wall seconds: " + wallSeconds);
+        System.out.println("- output tokens/s: " + wallTokensPerSecond);
+        System.out.println("- decode seconds: " + decodeSeconds);
+        System.out.println("- decode tokens/s: " + decodeTokensPerSecond);
     }
 
     private static Properties loadProperties() {

@@ -1,8 +1,8 @@
 # daily-standapp-skainet
 
 Kleines Java-25-Maven-Projekt fuer eine lokale Standup-Anwendung mit SKaiNET.
-Der aktuelle Stand auf `main` nutzt Tool Calling: Das Modell ruft bei Bedarf `git log`
-fuer `../example.git` ueber die Kommandozeile auf und fasst die Commits danach zusammen.
+Der Stand auf `step3` nutzt MCP: Ein separater Spring-AI-MCP-Server stellt `git_log`
+bereit und der SKaiNET-Client bindet dieses Tool ueber einen MCP-Client ein.
 
 ## Build
 
@@ -24,7 +24,14 @@ Danach in `src/main/resources/application.properties` den Modellpfad setzen:
 embedded.model.path=path/to/llama-3.2-1b-instruct-q8_0.gguf
 ```
 
-Dann die Anwendung starten:
+Dann zuerst den MCP-Server starten:
+
+```bash
+java -cp "target/classes:$(cat target/classpath.txt)" \
+  daily.standapp.mcp.server.GitLogMcpServerApplication ../example.git
+```
+
+Danach die eigentliche Anwendung starten:
 
 ```bash
 java -Xms2g -Xmx16g --enable-preview --add-modules jdk.incubator.vector \
@@ -33,3 +40,9 @@ java -Xms2g -Xmx16g --enable-preview --add-modules jdk.incubator.vector \
 ```
 
 `target/classpath.txt` wird beim `compile`-Schritt automatisch erzeugt.
+
+Zusatzkonfiguration in `application.properties`:
+
+```properties
+mcp.server.url=http://localhost:8085
+```

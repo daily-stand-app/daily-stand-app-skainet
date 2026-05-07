@@ -13,11 +13,18 @@ import java.util.List;
 public final class GitHistoryReader {
 
     public List<GitCommitEntry> readHistory(Path repositoryPath) {
+        return readHistory(repositoryPath, Integer.MAX_VALUE);
+    }
+
+    public List<GitCommitEntry> readHistory(Path repositoryPath, int maxCount) {
         try (Repository repository = openRepository(repositoryPath);
              Git git = new Git(repository)) {
 
             List<GitCommitEntry> commits = new ArrayList<>();
-            Iterable<org.eclipse.jgit.revwalk.RevCommit> logEntries = git.log().call();
+            int effectiveMaxCount = maxCount > 0 ? maxCount : Integer.MAX_VALUE;
+            Iterable<org.eclipse.jgit.revwalk.RevCommit> logEntries = git.log()
+                    .setMaxCount(effectiveMaxCount)
+                    .call();
 
             for (org.eclipse.jgit.revwalk.RevCommit commit : logEntries) {
                 commits.add(new GitCommitEntry(

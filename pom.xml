@@ -14,13 +14,42 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jgit.version>7.6.0.202603022253-r</jgit.version>
         <skainet.transformers.version>0.21.1</skainet.transformers.version>
+        <spring.boot.version>3.5.14</spring.boot.version>
+        <spring.ai.version>1.1.5</spring.ai.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring.ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
             <groupId>org.eclipse.jgit</groupId>
             <artifactId>org.eclipse.jgit</artifactId>
             <version>${jgit.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-client</artifactId>
         </dependency>
         <dependency>
             <groupId>sk.ainet.transformers</groupId>
@@ -71,6 +100,7 @@
                 <version>3.14.1</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
+                    <parameters>true</parameters>
                 </configuration>
             </plugin>
             <plugin>
