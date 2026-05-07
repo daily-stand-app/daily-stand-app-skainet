@@ -29,12 +29,7 @@ public final class App {
         ToolCallingSummary toolCallingSummary = new ToolCallingSummary();
         ToolCallingSummary.ToolCallingResult toolCallingResult = toolCallingSummary.summarize(
                 modelPath,
-                repositoryPath,
-                """
-                        Ich bin ein erfahrener Java Senior Developer. Für mein Daily Stand-Up morgen früh muss ich zusammenfassen, was ich bisher gemacht habe.
-                        Fasse mir das Git-Repository kurz zusammen, so dass ich es meinen Kollegen erzählen kann.
-                        Wenn du Commit-Informationen brauchst, nutze das Tool git_log.
-                        """
+                repositoryPath
         );
         System.out.println("Zusammenfassung:");
         System.out.println(toolCallingResult.summary());

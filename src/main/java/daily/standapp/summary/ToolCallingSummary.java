@@ -1,5 +1,6 @@
 package daily.standapp.summary;
 
+import daily.standapp.git.GitLogCommand;
 import sk.ainet.apps.kllama.chat.AgentConfig;
 import sk.ainet.apps.kllama.chat.ModelMetadata;
 import sk.ainet.apps.kllama.chat.ToolDefinition;
@@ -9,21 +10,31 @@ import sk.ainet.apps.kllama.chat.java.JavaTools;
 import sk.ainet.apps.kllama.java.KLlamaJava;
 import sk.ainet.apps.kllama.java.KLlamaSession;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public final class ToolCallingSummary {
     private static final int DEFAULT_MAX_COMMITS = 20;
-    private static final int GIT_TIMEOUT_SECONDS = 10;
+    private static final String SYSTEM_PROMPT = """
+            Du bist ein knapper Assistent für Daily-Standup-Zusammenfassungen.
+            Antworte auf Deutsch.
+            Wenn der Nutzer ein Git-Repository zusammengefasst haben möchte,
+            rufe vor deiner Antwort genau einmal das Tool git_log auf.
+            """;
+    private final GitLogCommand gitLogCommand;
 
-    public ToolCallingResult summarize(String modelPath, Path repositoryPath, String userPrompt) {
+    public ToolCallingSummary() {
+        this(new GitLogCommand());
+    }
+
+    ToolCallingSummary(GitLogCommand gitLogCommand) {
+        this.gitLogCommand = gitLogCommand;
+    }
+
+    public ToolCallingResult summarize(String modelPath, Path repositoryPath) {
         Path ggufPath = Path.of(modelPath);
         if (!Files.exists(ggufPath)) {
             throw new IllegalStateException("Model file not found: " + ggufPath.toAbsolutePath());
@@ -31,16 +42,13 @@ public final class ToolCallingSummary {
 
         AtomicInteger toolCalls = new AtomicInteger();
         JavaTool gitLogTool = gitLogTool(repositoryPath, toolCalls);
+        String userPrompt = buildPrompt();
 
-        try (KLlamaSession session = KLlamaJava.loadGGUF(ggufPath, null)) {
+        try (KLlamaSession session = KLlamaJava.loadGGUF(ggufPath, SYSTEM_PROMPT)) {
             JavaAgentLoop agent = JavaAgentLoop.builder()
                     .session(session)
                     .tool(gitLogTool)
-                    .systemPrompt("""
-                            You are a concise assistant for daily standup summaries.
-                            Answer in German.
-                            When the user asks to summarize a git repository, call the git_log tool exactly once before answering.
-                            """)
+                    .systemPrompt(SYSTEM_PROMPT)
                     .config(new AgentConfig())
                     .template("llama3")
                     .metadata(new ModelMetadata())
@@ -85,6 +93,14 @@ public final class ToolCallingSummary {
         }
     }
 
+    private String buildPrompt() {
+        return """
+                Ich bin ein erfahrener Java Senior Developer. Für mein Daily Stand-Up morgen früh muss ich zusammenfassen, was ich bisher gemacht habe.
+                Fasse mir das Git-Repository kurz zusammen, so dass ich es meinen Kollegen erzählen kann.
+                Wenn du Commit-Informationen brauchst, nutze das Tool git_log.
+                """.trim();
+    }
+
     private JavaTool gitLogTool(Path repositoryPath, AtomicInteger toolCalls) {
         return new JavaTool() {
             @Override
@@ -110,48 +126,15 @@ public final class ToolCallingSummary {
             public String execute(Map<String, ?> arguments) {
                 toolCalls.incrementAndGet();
                 int maxCount = positiveInt(arguments.get("max_count"), DEFAULT_MAX_COMMITS);
-                return runGitLog(repositoryPath, maxCount);
+                System.out.println("[tool] Calling git_log for repository "
+                        + repositoryPath.toAbsolutePath().normalize()
+                        + " with max_count=" + maxCount);
+                String output = gitLogCommand.run(repositoryPath, maxCount);
+                System.out.println("[tool] git_log result:");
+                System.out.println(output);
+                return output;
             }
         };
-    }
-
-    private String runGitLog(Path repositoryPath, int maxCount) {
-        List<String> command = List.of(
-                "git",
-                "--no-pager",
-                "-C",
-                repositoryPath.toAbsolutePath().normalize().toString(),
-                "log",
-                "--max-count=" + maxCount,
-                "--pretty=format:Committer: %an%nE-Mail: %ae%nMessage: %s%n---"
-        );
-
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true);
-
-        try {
-            Process process = processBuilder.start();
-            boolean finished = process.waitFor(GIT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-                throw new IllegalStateException("git log timed out for repository: "
-                        + repositoryPath.toAbsolutePath().normalize());
-            }
-
-            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-            if (process.exitValue() != 0) {
-                throw new IllegalStateException("git log failed: " + output);
-            }
-            if (output.isBlank()) {
-                return "Keine Commits gefunden.";
-            }
-            return output;
-        } catch (IOException exception) {
-            throw new IllegalStateException("Failed to run git log.", exception);
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while running git log.", exception);
-        }
     }
 
     private int positiveInt(Object value, int fallback) {
