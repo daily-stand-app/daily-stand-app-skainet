@@ -2,6 +2,7 @@ package daily.standapp;
 
 import daily.standapp.git.GitCommitEntry;
 import daily.standapp.git.GitHistoryReader;
+import daily.standapp.summary.EmbeddedLLMSummary;
 import daily.standapp.summary.LocalAPISummary;
 import daily.standapp.summary.PublicAPISummary;
 
@@ -14,10 +15,16 @@ public final class App {
     }
 
     public static void main(String[] args) {
+        String modelPath = "path/to/llama-3.2-1b-instruct-q8_0.gguf";
         int maxOutputTokens = 300;
 
         GitHistoryReader historyReader = new GitHistoryReader();
         List<GitCommitEntry> commits = historyReader.readHistory(Path.of("..", "example.git"));
+
+        System.out.println("=== Embedded LLM ===");
+        EmbeddedLLMSummary embeddedLLMSummary = new EmbeddedLLMSummary();
+        System.out.println(embeddedLLMSummary.summarize(modelPath, commits));
+        System.out.println();
 
         // System.out.println("=== Public API ===");
         // PublicAPISummary publicAPISummary = new PublicAPISummary();
