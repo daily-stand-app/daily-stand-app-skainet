@@ -1,6 +1,8 @@
 # daily-standapp-skainet
 
-Kleines Java-25-Maven-Projekt als Startpunkt fuer eine lokale Standup-Anwendung mit SKaiNET.
+Kleines Java-25-Maven-Projekt fuer eine lokale Standup-Anwendung mit SKaiNET.
+Der aktuelle Stand auf `main` nutzt Tool Calling: Das Modell ruft bei Bedarf `git log`
+fuer `../example.git` ueber die Kommandozeile auf und fasst die Commits danach zusammen.
 
 ## Build
 
