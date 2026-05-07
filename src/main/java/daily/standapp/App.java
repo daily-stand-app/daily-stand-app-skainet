@@ -19,6 +19,14 @@ public final class App {
         GitHistoryReader historyReader = new GitHistoryReader();
         List<GitCommitEntry> commits = historyReader.readHistory(Path.of("..", "example.git"));
 
+        System.out.println("=== Git Commits ===");
+        for (GitCommitEntry commit : commits) {
+            System.out.println("- Committer: " + commit.committer()
+                    + ", E-Mail: " + commit.emailAddress()
+                    + ", Message: " + commit.commitMessage());
+        }
+        System.out.println();
+
         // System.out.println("=== Public API ===");
         // PublicAPISummary publicAPISummary = new PublicAPISummary();
         // System.out.println(publicAPISummary.summarize(commits));
