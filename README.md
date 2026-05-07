@@ -5,7 +5,7 @@ Kleines Java-25-Maven-Projekt als Startpunkt fuer eine lokale Standup-Anwendung 
 ## Build
 
 ```bash
-./mvnw compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+./mvnw compile
 ```
 
 ## Start auf der Kommandozeile
@@ -23,6 +23,8 @@ java -Xms2g -Xmx16g --enable-preview --add-modules jdk.incubator.vector \
   -cp "target/classes:$(cat target/classpath.txt)" \
   daily.standapp.App
 ```
+
+`target/classpath.txt` wird beim `compile`-Schritt automatisch erzeugt.
 
 ## Von `initial` nach `step1`
 
