@@ -22,17 +22,7 @@ import java.util.regex.Pattern;
 
 public final class LocalAPISummary {
     private static final Pattern MODEL_ID_PATTERN = Pattern.compile("\"id\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
-    private static final Pattern OUTPUT_TEXT_PATTERN = Pattern.compile(
-            "\"type\"\\s*:\\s*\"output_text\".*?\"text\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"",
-            Pattern.DOTALL
-    );
-    private static final Pattern REASONING_TEXT_PATTERN = Pattern.compile(
-            "\"type\"\\s*:\\s*\"reasoning_text\".*?\"text\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"",
-            Pattern.DOTALL
-    );
     private static final String FINAL_PREFIX = "FINAL:";
-    private static final Pattern DRAFT_PATTERN = Pattern.compile("(?m)^.*Draft\\s*\\d+\\s*:\\*?\\s*(.+)$");
-    private static final Pattern FINAL_ANSWER_PATTERN = Pattern.compile("(?m)^.*Final\\s+(?:answer|summary)\\s*:\\*?\\s*(.+)$");
     private static final Pattern OUTPUT_TOKENS_PATTERN = Pattern.compile("\"output_tokens\"\\s*:\\s*(\\d+)");
     private static final Pattern INPUT_TOKENS_PATTERN = Pattern.compile("\"input_tokens\"\\s*:\\s*(\\d+)");
     private static final Pattern TOTAL_TOKENS_PATTERN = Pattern.compile("\"total_tokens\"\\s*:\\s*(\\d+)");
@@ -225,24 +215,20 @@ public final class LocalAPISummary {
     }
 
     private static String extractOutputText(String responseBody, boolean allowReasoningFallback) {
-        Matcher matcher = OUTPUT_TEXT_PATTERN.matcher(responseBody);
-        if (matcher.find()) {
-            return cleanupExtractedAnswer(unescapeJson(matcher.group(1)));
+        String outputText = findTextByType(responseBody, "output_text");
+        if (outputText != null) {
+            return cleanupExtractedAnswer(outputText);
         }
 
+        String reasoningText = findTextByType(responseBody, "reasoning_text");
         if (allowReasoningFallback) {
-            Matcher reasoningMatcher = REASONING_TEXT_PATTERN.matcher(responseBody);
-            if (reasoningMatcher.find()) {
-                String reasoningText = unescapeJson(reasoningMatcher.group(1)).trim();
-                String extractedAnswer = extractDraftAnswer(reasoningText);
-                if (extractedAnswer != null) {
-                    return extractedAnswer;
-                }
+            String extractedAnswer = extractDraftAnswer(reasoningText);
+            if (extractedAnswer != null) {
+                return extractedAnswer;
             }
         }
 
-        Matcher reasoningMatcher = REASONING_TEXT_PATTERN.matcher(responseBody);
-        if (reasoningMatcher.find()) {
+        if (reasoningText != null) {
             throw new ReasoningOnlyException("Model returned only reasoning output, but no final answer text.");
         }
 
@@ -250,26 +236,42 @@ public final class LocalAPISummary {
     }
 
     private static String extractDraftAnswer(String reasoningText) {
-        String latestMatch = findLastMatch(reasoningText, FINAL_ANSWER_PATTERN);
-        if (latestMatch != null) {
-            return cleanupExtractedAnswer(latestMatch);
+        if (reasoningText == null || reasoningText.isBlank()) {
+            return null;
         }
 
-        latestMatch = findLastMatch(reasoningText, DRAFT_PATTERN);
-        if (latestMatch != null) {
-            return cleanupExtractedAnswer(latestMatch);
+        String latestFinal = null;
+        String latestDraft = null;
+        for (String line : reasoningText.split("\\R")) {
+            String trimmedLine = line.trim();
+            String normalized = trimmedLine.toLowerCase();
+
+            int finalIndex = normalized.indexOf("final answer");
+            if (finalIndex < 0) {
+                finalIndex = normalized.indexOf("final summary");
+            }
+            if (finalIndex >= 0) {
+                String candidate = extractLineValue(trimmedLine);
+                if (candidate != null && !candidate.isBlank()) {
+                    latestFinal = candidate;
+                }
+            }
+
+            if (normalized.contains("draft")) {
+                String candidate = extractLineValue(trimmedLine);
+                if (candidate != null && !candidate.isBlank()) {
+                    latestDraft = candidate;
+                }
+            }
         }
 
+        if (latestFinal != null) {
+            return cleanupExtractedAnswer(latestFinal);
+        }
+        if (latestDraft != null) {
+            return cleanupExtractedAnswer(latestDraft);
+        }
         return null;
-    }
-
-    private static String findLastMatch(String input, Pattern pattern) {
-        Matcher matcher = pattern.matcher(input);
-        String lastMatch = null;
-        while (matcher.find()) {
-            lastMatch = matcher.group(1);
-        }
-        return lastMatch;
     }
 
     private static String cleanupExtractedAnswer(String answer) {
@@ -277,6 +279,74 @@ public final class LocalAPISummary {
                 .replace(FINAL_PREFIX, "")
                 .replace("*", "")
                 .trim();
+    }
+
+    private static String extractLineValue(String line) {
+        int colonIndex = line.indexOf(':');
+        if (colonIndex < 0 || colonIndex + 1 >= line.length()) {
+            return null;
+        }
+        return line.substring(colonIndex + 1).trim();
+    }
+
+    private static String findTextByType(String responseBody, String type) {
+        String marker = "\"type\"";
+        int searchFrom = 0;
+        while (true) {
+            int typeKeyIndex = responseBody.indexOf(marker, searchFrom);
+            if (typeKeyIndex < 0) {
+                return null;
+            }
+
+            int typeValueIndex = responseBody.indexOf('\"', typeKeyIndex + marker.length());
+            if (typeValueIndex < 0) {
+                return null;
+            }
+
+            JsonStringResult typeResult = extractJsonString(responseBody, typeValueIndex);
+            if (type.equals(typeResult.value())) {
+                int textKeyIndex = responseBody.indexOf("\"text\"", typeResult.nextIndex());
+                if (textKeyIndex < 0) {
+                    return null;
+                }
+
+                int textStartQuote = responseBody.indexOf('\"', textKeyIndex + "\"text\"".length());
+                if (textStartQuote < 0) {
+                    return null;
+                }
+
+                return extractJsonString(responseBody, textStartQuote).value();
+            }
+
+            searchFrom = typeResult.nextIndex();
+        }
+    }
+
+    private static JsonStringResult extractJsonString(String input, int quoteIndex) {
+        if (quoteIndex < 0 || quoteIndex >= input.length() || input.charAt(quoteIndex) != '\"') {
+            throw new IllegalArgumentException("Expected JSON string at index " + quoteIndex);
+        }
+
+        StringBuilder raw = new StringBuilder();
+        boolean escaping = false;
+        for (int index = quoteIndex + 1; index < input.length(); index++) {
+            char current = input.charAt(index);
+            if (escaping) {
+                raw.append('\\').append(current);
+                escaping = false;
+                continue;
+            }
+            if (current == '\\') {
+                escaping = true;
+                continue;
+            }
+            if (current == '\"') {
+                return new JsonStringResult(unescapeJson(raw.toString()), index + 1);
+            }
+            raw.append(current);
+        }
+
+        throw new IllegalStateException("Unterminated JSON string in LM Studio response.");
     }
 
     private static GenerationStats extractGenerationStats(String responseBody) {
@@ -418,5 +488,8 @@ public final class LocalAPISummary {
         private ReasoningOnlyException(String message) {
             super(message);
         }
+    }
+
+    private record JsonStringResult(String value, int nextIndex) {
     }
 }
